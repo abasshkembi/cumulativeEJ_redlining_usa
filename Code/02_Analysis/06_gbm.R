@@ -18,13 +18,13 @@ ej_reg_sf
 ej_df_trial <- ej_reg_sf %>%
   as_tibble() %>%
   mutate(red = ifelse(holc_grade == "D", 1, 0)) %>%
-  select(neighborho, red, state, city, msa7, msa_name, holc_grade, RAW_E_LEAD:RAW_E_RSEI_AIR, RAW_D_LOWINC, RAW_D_NO_HS) %>%
+  select(neighborho, red, state, city, msa7, msa_name, holc_grade, region, RAW_E_LEAD:RAW_E_RSEI_AIR, RAW_D_LOWINC, RAW_D_NO_HS) %>%
   mutate(state = factor(state), city = factor(city)) %>%
   na.omit()
 
 # convert the data into within-city percentiles
 ej_df_trial_percentile <- ej_df_trial %>%
-  gather(env, value, -c(neighborho, red, holc_grade, state, city, msa7, msa_name, RAW_D_LOWINC, RAW_D_NO_HS)) %>%
+  gather(env, value, -c(neighborho, red, holc_grade, state, city, msa7, msa_name, region, RAW_D_LOWINC, RAW_D_NO_HS)) %>%
   group_by(city, state, env) %>%
   mutate(city_percentile = rank(value)/length(value)) %>%
   ungroup() %>%
@@ -203,6 +203,70 @@ ggarrange(
 
 
 
+
+
+
+
+
+
+
+
+#### Regional analysis
+
+regions <- ej_df_trial_percentile$region %>% unique()
+#[1] "South"     "West"      "Northeast" "Midwest" 
+
+#gbm_bootstrap(boot_i = 200, region3 = regions[1])
+#gbm_bootstrap(boot_i = 200, region3 = regions[2])
+#gbm_bootstrap(boot_i = 200, region3 = regions[3])
+gbm_bootstrap(boot_i = 200, region3 = regions[4])
+
+
+region_cumulative_OR_gbm <- NULL
+for(i in 1:4) {
+  temp_df <- gbm_extract_cumulative(boot_i = 200, ref = 0.5, region3 = regions[i]) %>%
+    #filter(quantile > 0.74 & quantile < 0.76) %>%
+    group_by(quantile) %>%
+    summarise(mean = round(median(OR), 2),
+              q2.5 = round(quantile(OR, probs = 0.025), 3),
+              q97.5 = round(quantile(OR, probs = 0.975), 3)) %>%
+    ungroup() %>%
+    mutate(region = regions[i])
+  
+  region_cumulative_OR_gbm <- rbind(region_cumulative_OR_gbm, temp_df)
+}
+
+region_cumulative_OR_gbm %>%
+  filter(quantile > 0.06) %>%
+  filter(quantile < 0.91) %>%
+  filter(region == "Northeast") %>%
+  transmute(quantile = quantile,
+            or = paste0(round(mean,2), " (", round(q2.5, 2), ", ", round(q97.5, 2), ")"))
+
+region_cumulative_OR_gbm %>%
+  filter(quantile > 0.74) %>%
+  filter(quantile < 0.76) %>%
+  mutate(shape_bin = ifelse(q2.5 < 1, "open", "closed")) %>%
+  ggplot(aes(y = fct_reorder(region, mean))) +
+  geom_vline(xintercept = 1, linetype = "dotted", color = "black") +
+  geom_errorbar(aes(xmin = q2.5, xmax = q97.5, color = shape_bin), width = 0.4) +
+  geom_point(aes(x = mean, shape = shape_bin), color = "grey20") +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.position = "inside",
+        legend.position.inside = c(0.85, 0.17),
+        legend.key.height = unit(0.035, "npc")
+  ) +
+  scale_shape_manual(values = c("open" = 0, "closed" = 15)) +
+  scale_color_manual(values = c("open" = "grey70", "closed" = "grey40")) +
+  scale_x_log10(limits = c(0.2, 100), breaks = c(0, 0.5, 1, 2, 5, 10, 50, 100)) +
+  annotation_logticks(sides = "b") +
+  labs(x = "Odds Ratio\n(from simultaneous, IQR increase in 12 environmental exposures)",
+       y = NULL, 
+       title = "Joint odds of historically redlined neighborhood",
+       subtitle = "By metropolitan area") +
+  guides(shape = "none", color = "none")
 
 
 

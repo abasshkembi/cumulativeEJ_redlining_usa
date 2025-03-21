@@ -113,3 +113,38 @@ ej_reg_sf <- ej_reg_sf %>%
 
 
 
+
+
+
+
+
+
+### add in regions of the US
+
+south_states <- c("Georgia", "Mississippi", "Alabama", "Florida", "Louisiana", "Arkansas", "Tennessee",
+                  "South Carolina", "North Carolina", "Kentucky", "Virginia", "Maryland", "Oklahoma", "West Virginia",
+                  "Delaware", "Texas")
+
+
+midwest_states <- c("Illinois", "Indiana", "Iowa", "Kansas", "Michigan", "Minnesota", "Missouri", "Nebraska", "North Dakota", "Ohio", "South Dakota", "Wisconsin")
+which(midwest_states %in% south_states) #none
+west_states <- c("Alaska", "Arizona", "California", "Colorado", "Hawaii", "Idaho", "Montana", "Nevada", "New Mexico", "Oregon", "Utah", "Washington", "Wyoming")
+which(west_states%in% south_states) #none
+
+ej_reg_sf <- ej_reg_sf %>%
+  left_join(
+    tibble(state = state.abb,
+           StateDesc = state.name),
+    by = "state"
+  ) %>%
+  mutate(region =
+           case_when(
+             StateDesc %in% south_states ~ "South",
+             StateDesc %in% midwest_states ~ "Midwest",
+             StateDesc %in% west_states ~ "West",
+             TRUE ~ "Northeast"
+           )
+         )
+
+
+
