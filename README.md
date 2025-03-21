@@ -69,12 +69,6 @@ The code used to call and process the EJScreen API are under the `01_API code` f
       * simulates "hypothesized" data for the second panel of the Graphical Abstract
     * spatial_models_results.Rds
       * stores model results of conditional autoregressive models
-    * gbm boostraps/
-      * stores model results of each *i* booststrap iteration of gradient boosted regression tree model run in `06_gbm.R` in an `.rds` format
-      * file naming: `gbm_redlining_env_i{BOOTSTRAP_ITERATION}_{all | METROPOLITAN_AREA | REGION}.rds`
-        * `all` returns model on all data
-        * `METROPOLITAN_AREA` returns metropolitan area-specific model results (e.g. ,"Akron, OH")
-        * `Region` returns region-specific model results (e.g., "West")
 
 ## 4. Helper documents
 
